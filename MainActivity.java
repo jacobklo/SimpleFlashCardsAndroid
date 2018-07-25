@@ -1,12 +1,21 @@
 package net.jacoblo.mysampleapp1;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
 import android.widget.TextView;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
+    private static final int CHOOSE_FILE_REQUESTCODE = 8777;
 
     private Timer timer;
     private MemoryData md;
@@ -77,8 +86,53 @@ public class MainActivity extends AppCompatActivity {
                 timer.reset();
                 timer.start();
                 break;
+            case R.id.tv_file:
+                openFile(CHOOSE_FILE_REQUESTCODE);
+                break;
         }
         this.update();
+    }
+
+    public void openFile(int CODE) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("text/plain");
+        startActivityForResult(intent, CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (data != null ) {
+            Uri uri = data.getData();
+            setFilePathAndUpdateMemData(uri);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    public void setFilePathAndUpdateMemData( Uri uri ) {
+        md.mem_data = readTextFromUri(uri);
+        md.reset();
+    }
+
+    private String[] readTextFromUri(Uri uri)  {
+        ArrayList<String> result = new ArrayList<>();
+        String line;
+
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    inputStream));
+
+            while ((line = reader.readLine()) != null) {
+                result.add(line);
+            }
+            reader.close();
+            inputStream.close();
+        }
+        catch ( IOException ioe ) {
+            return new String[0];
+        }
+
+        return result.toArray(new String[result.size()]);
     }
 
     private static class Timer
@@ -132,41 +186,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static class MemoryData {
-        private static final String[] MEM_DATA = {
-                "Vivian Law"
-                ,"O'Brien"
-                ,"Linus"
-                ,"OrlanDo bloom"
-        };
+        private String[] mem_data;
         private int[] m_Randoms;
         private int m_Pointer;
 
         public MemoryData () {
+            mem_data = new String[1];
+            mem_data[0] = "no Input";
             reset();
         }
 
         public int getCurrentNumber() {
-            if (m_Pointer >= MEM_DATA.length) return Integer.MAX_VALUE;
+            if (m_Pointer >= mem_data.length) return Integer.MAX_VALUE;
             return m_Randoms[m_Pointer] + 1;
         }
 
         public String getCurrentItem() {
-            if (m_Pointer >= MEM_DATA.length) return "";
-            return MEM_DATA[m_Randoms[m_Pointer]];
+            if (m_Pointer >= mem_data.length) return "";
+            return mem_data[m_Randoms[m_Pointer]];
         }
 
         public int itemLeft() {
-            return MEM_DATA.length - m_Pointer;
+            return mem_data.length - m_Pointer;
         }
 
         public boolean next() {
-            if (m_Pointer >= MEM_DATA.length ) return false;
+            if (m_Pointer >= mem_data.length ) return false;
             m_Pointer++;
             return true;
         }
 
         public void reset() {
-            m_Randoms = new int[MEM_DATA.length];
+            m_Randoms = new int[mem_data.length];
             for(int i = 0 ; i < m_Randoms.length ; i++ ) {
                 m_Randoms[i] = i;
             }
