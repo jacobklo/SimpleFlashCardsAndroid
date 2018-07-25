@@ -8,6 +8,23 @@
     tools:context=".MainActivity">
 
     <TextView
+        android:id="@+id/tv_file"
+        android:layout_width="368dp"
+        android:layout_height="20dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:onClick="onClick"
+        android:text="File"
+        android:textAlignment="center"
+        android:textAppearance="@android:style/TextAppearance.Material.Medium"
+        android:textColor="#FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.060000002" />
+
+    <TextView
         android:id="@+id/tv_timer"
         android:layout_width="368dp"
         android:layout_height="100dp"
