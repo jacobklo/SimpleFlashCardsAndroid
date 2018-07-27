@@ -1,5 +1,4 @@
-package net.jacoblo.mysampleapp1;
-
+package net.jacoblo.mem;
 import android.content.Intent;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
@@ -17,21 +16,25 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
     private static final int CHOOSE_FILE_REQUESTCODE = 8777;
 
-    private Timer timer;
-    private MemoryData md;
+    private Timer m_Timer;
+    private MemoryData m_MemData;
     private boolean showAns;
+
+    public MainActivity () {
+        super();
+        m_Timer = new Timer();
+        m_MemData = new MemoryData();
+        showAns = false;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        timer = new Timer();
-        md = new MemoryData();
-        showAns = false;
 
         setContentView(R.layout.activity_main);
-
+        // update GUI handler
         final Handler h = new Handler();
-        final int delay = 500; //milliseconds
+        final int delay = 1000; //milliseconds
 
         h.postDelayed(new Runnable(){
             public void run(){
@@ -46,45 +49,45 @@ public class MainActivity extends AppCompatActivity {
         TextView tv_num = findViewById(R.id.tv_num);
         TextView tv_left = findViewById(R.id.tv_left);
         TextView tv_ans = findViewById(R.id.tv_ans);
-        tv_left.setText(""+md.itemLeft());
-        if ( md.itemLeft() <= 0 ) {
-            timer.pause();
+        tv_left.setText(""+ m_MemData.itemLeft());
+        if ( m_MemData.itemLeft() <= 0 ) {
+            m_Timer.pause();
             tv_num.setText("Done!");
             tv_ans.setText( "");
             return;
         }
-        tv_num.setText(""+md.getCurrentNumber());
+        tv_num.setText(m_MemData.getCurrentItem().title);
         TextView tv_timer = findViewById(R.id.tv_timer);
-        tv_timer.setText(timer.toString());
-        tv_ans.setText( ( showAns ? md.getCurrentItem() : "" ));
+        tv_timer.setText(m_Timer.toString());
+        tv_ans.setText( ( showAns ? m_MemData.getCurrentItem().value : "" ));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        timer.start();
+        m_Timer.start();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        timer.pause();
+        m_Timer.pause();
     }
 
     public void onClick(View view) {
         switch ( view.getId()) {
             case R.id.tv_num:
             case R.id.tv_ans:
-                md.next();
+                m_MemData.next();
                 showAns = false;
                 break;
             case R.id.tv_left:
                 showAns = true;
                 break;
             case R.id.tv_timer:
-                md.reset();
-                timer.reset();
-                timer.start();
+                m_MemData.reset();
+                m_Timer.reset();
+                m_Timer.start();
                 break;
             case R.id.tv_file:
                 openFile(CHOOSE_FILE_REQUESTCODE);
@@ -109,11 +112,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setFilePathAndUpdateMemData( Uri uri ) {
-        md.mem_data = readTextFromUri(uri);
-        md.reset();
+        ArrayList<String> inputs = readTextFromUri(uri);
+        m_MemData.mem_data = MemoryData.convertToMemData(inputs);
+        m_MemData.reset();
     }
 
-    private String[] readTextFromUri(Uri uri)  {
+    private ArrayList<String> readTextFromUri(Uri uri)  {
         ArrayList<String> result = new ArrayList<>();
         String line;
 
@@ -129,10 +133,10 @@ public class MainActivity extends AppCompatActivity {
             inputStream.close();
         }
         catch ( IOException ioe ) {
-            return new String[0];
+            return new ArrayList<>();
         }
 
-        return result.toArray(new String[result.size()]);
+        return result;
     }
 
     private static class Timer
@@ -186,38 +190,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static class MemoryData {
-        private String[] mem_data;
+
+        private ArrayList<FlashCard>  mem_data;
         private int[] m_Randoms;
         private int m_Pointer;
 
         public MemoryData () {
-            mem_data = new String[1];
-            mem_data[0] = "no Input";
+            mem_data = new ArrayList<>();
             reset();
         }
 
         public int getCurrentNumber() {
-            if (m_Pointer >= mem_data.length) return Integer.MAX_VALUE;
+            if (m_Pointer >= mem_data.size()) return Integer.MAX_VALUE;
             return m_Randoms[m_Pointer] + 1;
         }
 
-        public String getCurrentItem() {
-            if (m_Pointer >= mem_data.length) return "";
-            return mem_data[m_Randoms[m_Pointer]];
+        public FlashCard getCurrentItem() {
+            if (m_Pointer >= mem_data.size()) return null;
+            return mem_data.get(m_Randoms[m_Pointer]);
         }
 
         public int itemLeft() {
-            return mem_data.length - m_Pointer;
+            return mem_data.size() - m_Pointer;
         }
 
         public boolean next() {
-            if (m_Pointer >= mem_data.length ) return false;
+            if (m_Pointer >= mem_data.size() ) return false;
             m_Pointer++;
             return true;
         }
 
         public void reset() {
-            m_Randoms = new int[mem_data.length];
+            m_Randoms = new int[mem_data.size()];
             for(int i = 0 ; i < m_Randoms.length ; i++ ) {
                 m_Randoms[i] = i;
             }
@@ -232,6 +236,58 @@ public class MainActivity extends AppCompatActivity {
             int tmp = arr[i];
             arr[i] = arr[j];
             arr[j] = tmp;
+        }
+
+        public static ArrayList<FlashCard> convertToMemData(ArrayList<String> inputs) {
+            if ( inputs == null || inputs.size() <= 0 ) return new ArrayList<>();
+
+            ArrayList<FlashCard> resultCards = new ArrayList<>();
+            for ( String s : inputs) {
+                FlashCard fc = FlashCard.convertCRVToFlashCard(s);
+                if (fc != null) {
+                    resultCards.add(fc);
+                }
+            }
+
+            return resultCards;
+        }
+
+        public static class FlashCard
+        {
+            String title;
+            String value;
+
+            public FlashCard ( String t, String v ) {
+                title = t;
+                value = v;
+            }
+
+            public static FlashCard convertCRVToFlashCard(String s) {
+                if (s == null || s.length() <= 0 ) return null;
+
+                int start = 0;
+
+                ArrayList<String> result = new ArrayList<>();
+
+                while( s.indexOf(',', start+1) > 0) {
+                    int end = s.indexOf(',', start+1);
+                    result.add(s.substring(start, end));
+                    start = end;
+                }
+
+                result.add(s.substring(start+1, s.length()));
+
+                FlashCard fc = new FlashCard("","");
+                if (result.size() > 0 ) {
+                    fc.title = result.get(0);
+                }
+                if ( result.size() > 1 ) {
+                    fc.value = result.get(1);
+                }
+
+                return fc;
+            }
+
         }
     }
 }
