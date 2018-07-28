@@ -1,3 +1,5 @@
+.DS_Store
+
 # Built application files
 *.apk
 *.ap_
@@ -41,6 +43,14 @@ captures/
 .idea/dictionaries
 .idea/libraries
 .idea/caches
+*.iml
+.idea
+.idea/workspace.xml
+.gradle
+build/
+.navigation
+captures/
+output.json 
 
 # Keystore files
 # Uncomment the following line if you do not want to check your keystore files in.
